@@ -1,0 +1,5 @@
+pulp==2.9.0
+pandas==2.2.1
+openpyxl==3.0.9
+streamlit==1.12.0
+

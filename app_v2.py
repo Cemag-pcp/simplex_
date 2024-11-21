@@ -12,7 +12,7 @@ def tratar(input_csv):
 
     # df = df.drop(columns={'Unnamed: 0'})
     # df['CODIGO'] = df['DESCRIÇÃO'].str.split(' - ')[0][0]
-    df.rename(columns={'Código': 'codigo', 'MP': 'mp', 'Qntd': 'qtd_maxima', 'Conjunto': 'conjuntos', 'Comprimento': 'tamanhos'}, inplace=True)
+    df.rename(columns={'Código': 'codigo', 'Matéria Prima': 'mp', 'Qntd': 'qtd_maxima', 'Conjunto': 'conjuntos', 'Comprimento': 'tamanhos'}, inplace=True)
     df.dropna(inplace=True)
 
     # Converter 'qtd_maxima' para float
@@ -24,7 +24,7 @@ def tratar(input_csv):
     df_agrouped = df.groupby(['conjuntos','mp','codigo']).agg({
         'qtd_maxima': 'sum',
         'tamanhos': 'mean'
-    }).reset_index()
+    }).reset_index().sort_values('mp')
 
     return df_agrouped
 
@@ -36,6 +36,7 @@ def carregar_dados_csv(input_csv):
     df['tamanhos'] = df['tamanhos'].astype(float)
     df['conjuntos'] = df['conjuntos'].astype(str)
     df['mp'] = df['mp'].astype(str)
+
     return df
 
 # Função para resolver o problema de otimização e armazenar os resultados
@@ -48,7 +49,13 @@ def otimizar_e_armazenar_resultados(df, resultados_pickle_path, resultados_csv_p
 
     # Iterar sobre cada grupo
     for mp, grupo in grupos:
+        # print(f"\nProcessando MP: {mp}")
+        tamanho_total = (grupo['qtd_maxima'] * grupo['tamanhos']).sum()
+
+        # Exibir o resultado para cada grupo
         print(f"\nProcessando MP: {mp}")
+        print(f"Tamanho total do grupo: {tamanho_total}")
+
         codigos_pecas = grupo['codigo'].tolist()
         qtd_maxima = grupo['qtd_maxima'].tolist()
         tamanhos = grupo['tamanhos'].tolist()
@@ -77,7 +84,7 @@ def otimizar_e_armazenar_resultados(df, resultados_pickle_path, resultados_csv_p
             prob += folga, "Folga Total"
 
             # Restrição: total alocado + folga = 6000
-            prob += pulp.lpSum([variaveis[i] * tamanhos[i] for i in range(len(codigos_pecas))]) + folga == 6000, "Restrição de tamanho total alocado"
+            prob += pulp.lpSum([variaveis[i] * tamanhos[i] for i in range(len(codigos_pecas))]) + folga == tamanho_total, "Restrição de tamanho total alocado"
 
             # Resolvendo o problema
             prob.solve()
@@ -110,7 +117,7 @@ def otimizar_e_armazenar_resultados(df, resultados_pickle_path, resultados_csv_p
             qtd_maxima = [max(0, qtd) for qtd in qtd_maxima]
 
             # Calcula a perda de matéria-prima para esta ordem
-            perda_materia_prima = 6000 - total_tamanho_alocado_ordem
+            perda_materia_prima = tamanho_total - total_tamanho_alocado_ordem
 
             # Atualiza a perda de matéria-prima em cada item da iteração atual
             for item in resultados_iteracao:
@@ -149,7 +156,6 @@ def gerar_arquivos_excel(resultados_pickle_path, excel_template_path):
 
     for ordem, grupo in grupos_ordem:
         resultados_iteracao = grupo.to_dict('records')
-
         # Preencher o Excel com os resultados da ordem atual
         preencher_excel_ordem(excel_template_path, resultados_iteracao, ordem)
 
@@ -176,24 +182,20 @@ def preencher_excel_ordem(excel_template_path, resultados_iteracao, ordem_global
     ws['B4'] = f'OP{int(ordem_global)}'
     ws['B5'] = mp[0]
     # ws['E4'] = conjunto
-    ws['B6'] = '6000'
+    total_tamanho_alocado_ordem = sum(item['tamanho_alocado_item'] for item in resultados_iteracao)
+    num_varas = -(-total_tamanho_alocado_ordem // 6000)  # Equivalente a math.ceil()
+    perda_materia_prima = (num_varas * 6000) - total_tamanho_alocado_ordem
+
+    ws['B6'] = f"{total_tamanho_alocado_ordem}mm ou {total_tamanho_alocado_ordem / 6000:.2f} varas"
+    ws['E6'] = perda_materia_prima  # Exibe a perda de material em 'E6'
 
     # Preenche as células com os dados
     for idx, item in enumerate(resultados_iteracao):
         row = start_row + idx
-        ws[f'{codigo_col}{row}'] = item['codigo']
+        ws[f'{codigo_col}{row}'] = "0"+item['codigo'] if len(item['codigo'])==5 else item['codigo']
         ws[f'{quantidade_col}{row}'] = item['quantidade_alocada']
         ws[f'{tamanho_col}{row}'] = item['tamanho_alocado_item'] / item['quantidade_alocada']
         ws[f'{conjunto_col}{row}'] = item['conjunto']
-
-    # Calcula o tamanho total alocado na ordem
-    total_tamanho_alocado_ordem = sum(item['tamanho_alocado_item'] for item in resultados_iteracao)
-
-    # Calcula a perda de matéria-prima
-    perda_materia_prima = 6000 - total_tamanho_alocado_ordem
-
-    # Atribui a perda à célula 'AE6'
-    ws['E6'] = perda_materia_prima
 
     # Salva a planilha com um nome específico para a ordem
     output_excel_path = f'OP{int(ordem_global)}.xlsx'
