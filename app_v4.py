@@ -329,7 +329,6 @@ resultados_csv_path = 'resultado_otimizacao.csv'  # Novo arquivo CSV com as info
 def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
     arquivos_gerados = []  # Lista para armazenar os arquivos gerados
 
-    
     # Itera sobre cada grupo de códigos concatenados diferentes
     for codigos_concatenados, grupo in df_agrupado.groupby('codigos_concatenados'):
         # Carrega o template Excel
@@ -351,8 +350,9 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
         ws['B4'] = f'OS-{seq}'
         ws['B5'] = mp
         ws['B6'] = '6000'
-        ws['E6'] = qtd_vara
+        ws['G5'] = qtd_vara
         seq+=1
+        perca_por_peca=0
         # Preenche as células com os dados do grupo
         for idx, (codigo, detalhes) in enumerate(grupo['codigo_quantidades'].iloc[0].items(), start=0):
             row = start_row + idx
@@ -361,6 +361,10 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
             ws[f'{comprimento_col}{row}'] = detalhes['comprimento']  # Preenche o comprimento
             ws[f'{conjunto_col}{row}'] = detalhes['conjunto']
             ws[f'{qtd_planejada_col}{row}'] = float(detalhes['quantidade']) * float(qtd_vara)
+            perca_por_peca+=detalhes['quantidade']*detalhes['comprimento']
+
+        perca_total = 6000 - perca_por_peca
+        ws['G7'] = perca_total
 
         # Salva o arquivo em memória
         output = BytesIO()
