@@ -435,9 +435,9 @@ if st.button("Processar e Gerar Excel"):
 
         # Criar DataFrame do resumo para salvar como CSV
         df_resumo = pd.DataFrame(resumo_geral)
-        resumo_csv_buffer = BytesIO()
-        df_resumo.to_excel(resumo_csv_buffer, index=False, encoding="utf-8")
-        resumo_csv_buffer.seek(0)
+        resumo_excel_buffer = BytesIO()  # Correção no nome para clareza
+        df_resumo.to_excel(resumo_excel_buffer, index=False, engine="openpyxl")  # Remove encoding e adiciona engine
+        resumo_excel_buffer.seek(0)
 
         # Criar um arquivo ZIP em memória
         zip_buffer = BytesIO()
@@ -446,7 +446,7 @@ if st.button("Processar e Gerar Excel"):
                 # Adiciona cada arquivo Excel ao ZIP
                 zipf.writestr(nome, excel.getvalue())
             # Adiciona o arquivo de resumo ao ZIP
-            zipf.writestr("resumo_geral.xlsx", resumo_csv_buffer.getvalue())
+            zipf.writestr("resumo_geral.xlsx", resumo_excel_buffer.getvalue())
 
         # Movendo o ponteiro para o início do arquivo ZIP
         zip_buffer.seek(0)
