@@ -307,7 +307,7 @@ def gerar_arquivos_excel(resultados_pickle_path):
 input_csv = 'input_pecas.csv'  # Substitua pelo caminho do seu arquivo CSV de entrada
 
 # Caminho para o template Excel fornecido pelo usuário
-excel_template_path = 'GERAR OP SERRA.xlsx'  # Substitua pelo caminho do seu template Excel
+excel_template_path = 'novo_template.xlsx'  # Substitua pelo caminho do seu template Excel
 
 # Caminho para armazenar os resultados da otimização
 resultados_pickle_path = 'resultados_otimizacao.pkl'
@@ -328,6 +328,7 @@ resultados_csv_path = 'resultado_otimizacao.csv'  # Novo arquivo CSV com as info
 
 def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
     arquivos_gerados = []  # Lista para armazenar os arquivos gerados
+    resumo_geral = []  # Lista para armazenar os dados do resumo
 
     # Itera sobre cada grupo de códigos concatenados diferentes
     for codigos_concatenados, grupo in df_agrupado.groupby('codigos_concatenados'):
@@ -351,8 +352,9 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
         ws['B5'] = mp
         ws['B6'] = '6000'
         ws['G5'] = qtd_vara
-        seq+=1
-        perca_por_peca=0
+        seq += 1
+        perca_por_peca = 0
+
         # Preenche as células com os dados do grupo
         for idx, (codigo, detalhes) in enumerate(grupo['codigo_quantidades'].iloc[0].items(), start=0):
             row = start_row + idx
@@ -361,7 +363,16 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
             ws[f'{comprimento_col}{row}'] = detalhes['comprimento']  # Preenche o comprimento
             ws[f'{conjunto_col}{row}'] = detalhes['conjunto']
             ws[f'{qtd_planejada_col}{row}'] = float(detalhes['quantidade']) * float(qtd_vara)
-            perca_por_peca+=detalhes['quantidade']*detalhes['comprimento']
+            perca_por_peca += detalhes['quantidade'] * detalhes['comprimento']
+
+            # Adiciona os dados ao resumo geral
+            resumo_geral.append({
+                "Código": codigo,
+                "Quantidade": detalhes['quantidade'],
+                "Comprimento": detalhes['comprimento'],
+                "Conjunto": detalhes['conjunto'],
+                "Qtd Planejada": float(detalhes['quantidade']) * float(qtd_vara),
+            })
 
         perca_total = 6000 - perca_por_peca
         ws['G7'] = perca_total
@@ -374,7 +385,7 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
         # Armazena o arquivo em memória com o nome
         arquivos_gerados.append((f"OP_{codigos_concatenados.replace(', ', '_')}.xlsx", output))
 
-    return arquivos_gerados
+    return arquivos_gerados, resumo_geral
 
 st.title("Otimização de Peças e Geração de Excel")
 
@@ -392,7 +403,7 @@ Código,MP,Qntd,Comprimento,Conjunto
 # Processa os dados se o arquivo for carregado
 if uploaded_file is not None:
     # Carregar os dados CSV como DataFrame
-    df = pd.read_csv(uploaded_file)
+    df = pd.read_csv(uploaded_file, sep=',')
     
     # Mostrar os dados carregados
     st.dataframe(df)
@@ -416,8 +427,14 @@ if st.button("Processar e Gerar Excel"):
         # Gerar arquivos Excel
         df_resultado_grouped = gerar_arquivos_excel(resultados_pickle_path)
 
-        # Preencher os Excel e obter os arquivos gerados
-        arquivos_gerados = preencher_excel_ordem(excel_template_path, df_resultado_grouped, seq)
+        # Preencher os Excel e obter os arquivos gerados e o resumo
+        arquivos_gerados, resumo_geral = preencher_excel_ordem(excel_template_path, df_resultado_grouped, seq)
+
+        # Criar DataFrame do resumo para salvar como CSV
+        df_resumo = pd.DataFrame(resumo_geral)
+        resumo_csv_buffer = BytesIO()
+        df_resumo.to_csv(resumo_csv_buffer, index=False, encoding="utf-8")
+        resumo_csv_buffer.seek(0)
 
         # Criar um arquivo ZIP em memória
         zip_buffer = BytesIO()
@@ -425,6 +442,8 @@ if st.button("Processar e Gerar Excel"):
             for nome, excel in arquivos_gerados:
                 # Adiciona cada arquivo Excel ao ZIP
                 zipf.writestr(nome, excel.getvalue())
+            # Adiciona o arquivo de resumo ao ZIP
+            zipf.writestr("resumo_geral.csv", resumo_csv_buffer.getvalue())
 
         # Movendo o ponteiro para o início do arquivo ZIP
         zip_buffer.seek(0)
@@ -433,6 +452,6 @@ if st.button("Processar e Gerar Excel"):
         st.download_button(
             label="Baixar Todos os Arquivos em ZIP",
             data=zip_buffer,
-            file_name="planilhas.zip",
+            file_name="planilhas_com_resumo.zip",
             mime="application/zip",
         )
