@@ -367,11 +367,14 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
 
             # Adiciona os dados ao resumo geral
             resumo_geral.append({
+                "OS": seq,
                 "Código": codigo,
                 "Quantidade": detalhes['quantidade'],
                 "Comprimento": detalhes['comprimento'],
                 "Conjunto": detalhes['conjunto'],
                 "Qtd Planejada": float(detalhes['quantidade']) * float(qtd_vara),
+                "Perca": perca_por_peca,
+
             })
 
         perca_total = 6000 - perca_por_peca
@@ -433,7 +436,7 @@ if st.button("Processar e Gerar Excel"):
         # Criar DataFrame do resumo para salvar como CSV
         df_resumo = pd.DataFrame(resumo_geral)
         resumo_csv_buffer = BytesIO()
-        df_resumo.to_csv(resumo_csv_buffer, index=False, encoding="utf-8")
+        df_resumo.to_excel(resumo_csv_buffer, index=False, encoding="utf-8")
         resumo_csv_buffer.seek(0)
 
         # Criar um arquivo ZIP em memória
@@ -443,7 +446,7 @@ if st.button("Processar e Gerar Excel"):
                 # Adiciona cada arquivo Excel ao ZIP
                 zipf.writestr(nome, excel.getvalue())
             # Adiciona o arquivo de resumo ao ZIP
-            zipf.writestr("resumo_geral.csv", resumo_csv_buffer.getvalue())
+            zipf.writestr("resumo_geral.xlsx", resumo_csv_buffer.getvalue())
 
         # Movendo o ponteiro para o início do arquivo ZIP
         zip_buffer.seek(0)
