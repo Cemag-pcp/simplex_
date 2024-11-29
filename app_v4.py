@@ -349,7 +349,12 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
 
         # Define as células específicas no cabeçalho
         ws['B4'] = f'OS-{seq}'
+        tipo_mp = 'carbono' if mp.lower().find('inox') else 'carbono'
+        
         ws['B5'] = mp
+        mp='110401 - ACO LAMINADINOXO RED 2.3/4 1020'
+        tipo_mp = 'INOX' if 'inox' in mp.lower() else 'CARBONO'
+        ws['G4'] = tipo_mp
         ws['B6'] = '6000'
         ws['G5'] = qtd_vara
         seq += 1
@@ -374,7 +379,7 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
                 "Conjunto": detalhes['conjunto'],
                 "Qtd Planejada": float(detalhes['quantidade']) * float(qtd_vara),
                 "Perca": perca_por_peca,
-
+                "Qt. varas": qtd_vara
             })
 
         perca_total = 6000 - perca_por_peca
@@ -458,3 +463,5 @@ if st.button("Processar e Gerar Excel"):
             file_name="planilhas_com_resumo.zip",
             mime="application/zip",
         )
+
+
