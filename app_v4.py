@@ -352,8 +352,8 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
         tipo_mp = 'carbono' if mp.lower().find('inox') else 'carbono'
         
         ws['B5'] = mp
-        mp='110401 - ACO LAMINADINOXO RED 2.3/4 1020'
         tipo_mp = 'INOX' if 'inox' in mp.lower() else 'CARBONO'
+        
         ws['G4'] = tipo_mp
         ws['B6'] = '6000'
         ws['G5'] = qtd_vara
