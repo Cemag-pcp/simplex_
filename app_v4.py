@@ -379,7 +379,8 @@ def preencher_excel_ordem(excel_template_path, df_agrupado, seq):
                 "Conjunto": detalhes['conjunto'],
                 "Qtd Planejada": float(detalhes['quantidade']) * float(qtd_vara),
                 "Perca": perca_por_peca,
-                "Qt. varas": qtd_vara
+                "Qt. varas": qtd_vara,
+                "MP": mp,
             })
 
         perca_total = 6000 - perca_por_peca
