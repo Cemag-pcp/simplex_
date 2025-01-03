@@ -8,12 +8,13 @@ from io import BytesIO
 import zipfile
 
 def tratar(df):
-    # df = pd.read_csv(input_csv, sep=',', encoding='UTF-8')
+    # df = pd.read_csv('teste.csv', sep=',', encoding='UTF-8')
 
     # df = df.drop(columns={'Unnamed: 0'})
     # df['CODIGO'] = df['DESCRIÇÃO'].str.split(' - ')[0][0]
     df.rename(columns={'Código': 'codigo', 'MP': 'mp', 'Qntd': 'qtd_maxima', 'Conjunto': 'conjuntos', 'Comprimento': 'tamanhos'}, inplace=True)
-    df.dropna(inplace=True)
+    # df.dropna(inplace=True)
+    df = df[['codigo','mp','qtd_maxima','tamanhos','conjuntos']]
 
     # Converter 'qtd_maxima' para float
     df['qtd_maxima'] = df['qtd_maxima'].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
